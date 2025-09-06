@@ -1,164 +1,173 @@
+
+# filepath: /Users/totomcfrodo/Documents/Skoli/Haust2025/TGRA/Assignments/Car_game-main/Naascar_v2/Physics.py
 from Track import *
-from Car import*
+from Car import *
 import math
 
-
 class Physics:
-    def __init__(self, car, track = 0):
-        self.track = Track(track)
-        self.car = car
+    TILE = 400
+    MARGIN = 15
+    LANE_INNER_A = 185
+    LANE_INNER_B = 215
 
-    def bounce(self, nx, ny, p):
-        '''Takes as input a given normalized vector and bounces player (p)'s direction vector and image coordinates with the input vector1'''
-        self.car.car_direction[p] = Physics.bounce_direction(nx, ny, self.car.car_direction[p])
+    # Global render offset used by Track.draw_cell (shift_x = x*400 + 100)
+    OFFSET_X = 100
+    OFFSET_Y = 100
 
-        self.car.image_coords[p] = Physics.bounce_image(nx, ny, self.car.image_coords[p], len(self.car.image_coords[p])-1)
-        self.car.backwheel_coords[p] = Physics.bounce_image(nx, ny, self.car.backwheel_coords[p], 4)
-        self.car.frontwheel_coords[p] = Physics.bounce_image(nx, ny, self.car.frontwheel_coords[p], 4)
-        #self.car.car_speed[p] = self.car.car_speed[p] * 0.5
+    def __init__(self, track):
+        self.track = track
+        self.debug = False  # flip to True to draw debug boxes if you add a draw routine
 
-    def bounce_direction(nx, ny, car_direction):
-        #----------------bounce car direction------------------
-        reflected_x =car_direction[0] - 2 * (car_direction[0]*(nx) + car_direction[1]*(ny))*(nx)
-        reflected_y =car_direction[1] - 2 * (car_direction[0]*(nx) + car_direction[1]*(ny))*(ny)
-        return [round(reflected_x, 4), round(reflected_y, 4)]
+    @staticmethod
+    def _normalize(nx, ny):
+        l = math.sqrt(nx*nx + ny*ny)
+        if l == 0:
+            return 0.0, 0.0
+        return nx / l, ny / l
 
-    def bounce_image(nx, ny, image, image_size):
-        #----------------bounce car image coordiantes----------
-        for n in range(image_size):
-            reflected_image_x =image[n][0] - 2 * (image[n][0]*(nx) + image[n][1]*(ny))*(nx)
-            reflected_image_y =image[n][1] - 2 * (image[n][0]*(nx) + image[n][1]*(ny))*(ny)
-            image[n] = [round(reflected_image_x, 4), round(reflected_image_y, 4)]
-        return image
+    def collide(self, car, nx, ny):
+        nx, ny = Physics._normalize(nx, ny)
+        v = car.direction
+        dot = v[0]*nx + v[1]*ny
 
-    def improved_wall_boundries(self, cell, p):
-        cell_data = self.track.get_cell_data(cell[0], cell[1])
-        cell_x = cell[0] * 400 + 100
-        cell_y = cell[1] * 400 + 100
+        impact = abs(dot)
+        if car.speed > 0.6 * car.MAX_SPEED and impact > 0.15:
+            # Base loss 12%, plus up to +18% depending on how head-on
+            loss_fraction = 0.12 + 0.18 * impact          # range ≈ 0.12 .. 0.30
+            car.speed = max(car.MIN_SPEED, car.speed * (1.0 - loss_fraction))
 
-        #---------------------------- 90° TRUNS ---------------------------------
-        if cell_data == self.track.up_right_image:
-            if self.car.car_coordinates[p][1] - cell_y >= self.car.car_coordinates[p][0] - cell_x + 85:
-                Physics.bounce(self, 0.707, -0.707, p)
-            if self.car.car_coordinates[p][1] - cell_y <= self.car.car_coordinates[p][0] - cell_x - 185:
-                Physics.bounce(self, -0.707, 0.707, p)
-            if self.car.car_coordinates[p][1] >= cell_y + 385:
-                Physics.bounce(self, 0, -1, p)
-            if self.car.car_coordinates[p][0] <= cell_x + 15:
-                Physics.bounce(self, 1, 0, p)
+        v[0] = v[0] - 2*dot*nx
+        v[1] = v[1] - 2*dot*ny
 
-        elif cell_data == self.track.up_left_image:
-            if self.car.car_coordinates[p][0] + self.car.car_coordinates[p][1] >= cell_x + cell_y + 485:
-                Physics.bounce(self, -0.707, -0.707, p)
-            if self.car.car_coordinates[p][0] + self.car.car_coordinates[p][1] <= cell_x + cell_y + 215:
-                Physics.bounce(self, 0.707, 0.707, p)
-            if self.car.car_coordinates[p][1] >= cell_y + 385:
-                Physics.bounce(self, 0, -1, p)
-            if self.car.car_coordinates[p][0] >= cell_x + 385:
-                Physics.bounce(self, -1, 0, p)
+        # Re-normalize direction to preserve unit length
+        mag = math.hypot(v[0], v[1])
+        if mag:
+            v[0] /= mag
+            v[1] /= mag
+        
+        car.coordinates[0] += nx * 2
+        car.coordinates[1] += ny * 2
+        car.update_image_coordinates()
 
-        elif cell_data == self.track.down_right_image:
-            if self.car.car_coordinates[p][0] + self.car.car_coordinates[p][1] >= cell_x + cell_y + 585:
-                Physics.bounce(self, -0.707, -0.707, p)
-            if self.car.car_coordinates[p][0] + self.car.car_coordinates[p][1] <= cell_x + cell_y + 315:
-                Physics.bounce(self, 0.707, 0.707, p)
-            if self.car.car_coordinates[p][1] <= cell_y + 15:
-                Physics.bounce(self, 0, 1, p)
-            if self.car.car_coordinates[p][0] <= cell_x + 15:
-                Physics.bounce(self, 1, 0, p)
+    def wall_boundries(self, car):
+        TILE = self.TILE
+        OX = self.OFFSET_X
+        OY = self.OFFSET_Y
 
-        elif cell_data == self.track.down_left_image:
-            if self.car.car_coordinates[p][1] - cell_y >= self.car.car_coordinates[p][0] - cell_x + 185:
-                Physics.bounce(self, 0.707, -0.707, p)
-            if self.car.car_coordinates[p][1] - cell_y <= self.car.car_coordinates[p][0] - cell_x - 85:
-                Physics.bounce(self, -0.707, 0.707, p)
-            if self.car.car_coordinates[p][1] <= cell_y + 15:
-                Physics.bounce(self, 0, 1, p)
-            if self.car.car_coordinates[p][0] >= cell_x + 385:
-                Physics.bounce(self, -1, 0, p)
+        # Convert world -> tile index using the same +100 offset Track uses when drawing
+        # (car outside track safe-guard)
+        gx = car.coordinates[0] - OX
+        gy = car.coordinates[1] - OY
+        if gx < 0 or gy < 0:
+            return
+        cx_index = int(gx // TILE)
+        cy_index = int(gy // TILE)
 
-        #--------------------------- STRAIGHT WAYS ----------------------------      
-        elif cell_data == self.track.vert_left_image:
-            if self.car.car_coordinates[p][0] >= cell_x + 185:
-                Physics.bounce(self, -1, 0, p)
-            if self.car.car_coordinates[p][0] <= cell_x + 15:
-                Physics.bounce(self, 1, 0, p)
+        try:
+            cell_data = self.track.get_cell_data(cx_index, cy_index)
+        except KeyError:
+            return
+        if cell_data is None:
+            return
 
-        elif cell_data == self.track.vert_right_image:
-            if self.car.car_coordinates[p][0] >= cell_x + 385:
-                Physics.bounce(self, -1, 0, p)
-            if self.car.car_coordinates[p][0] <= cell_x + 215:
-                Physics.bounce(self, 1, 0, p)
+        origin_x = cx_index * TILE + OX
+        origin_y = cy_index * TILE + OY
 
-        elif cell_data == self.track.horiz_top_image: #####
-            if self.car.car_coordinates[p][1] >= cell_y + 385:
-                Physics.bounce(self, 0, -1, p)
-            if self.car.car_coordinates[p][1] <= cell_y + 215:
-                Physics.bounce(self, 0, 1, p)
+        lx = car.coordinates[0] - origin_x
+        ly = car.coordinates[1] - origin_y
 
-        elif cell_data == self.track.horiz_bot_image:
-            if self.car.car_coordinates[p][1] >= cell_y + 185:
-                Physics.bounce(self, 0, -1, p)
-            if self.car.car_coordinates[p][1] <= cell_y + 15:
-                Physics.bounce(self, 0, 1, p)
+        def top_hit():    return ly >= TILE - self.MARGIN
+        def bot_hit():    return ly <= self.MARGIN
+        def left_hit():   return lx <= self.MARGIN
+        def right_hit():  return lx >= TILE - self.MARGIN
 
-        #--------------------------- Lane Switch -----------------------------
-        elif cell_data == self.track.right_up_60_image:
-            if self.car.car_coordinates[p][1] >= cell_y + 385:
-                Physics.bounce(self, 0, -1, p)
-            if self.car.car_coordinates[p][1] <= cell_y + 15:
-                Physics.bounce(self, 0, 1, p)
-            if (self.car.car_coordinates[p][0] - cell_x) * 0.666667 - (self.car.car_coordinates[p][1] - cell_y) <= -185:
-                Physics.bounce(self, -0.55, 0.83, p)
-            if (self.car.car_coordinates[p][0] - cell_x) * 0.666667 - (self.car.car_coordinates[p][1] - cell_y) >= 51.4:
-                Physics.bounce(self, 0.55, -0.83, p)
+        def bounce(nx, ny):
+            self.collide(car, nx, ny)
+            raise StopIteration
 
-        elif cell_data == self.track.right_down_60_image:
-            if self.car.car_coordinates[p][1] >= cell_y + 385:
-                Physics.bounce(self, 0, -1, p)
-            if self.car.car_coordinates[p][1] <= cell_y + 15:
-                Physics.bounce(self, 0, 1, p)
-            if (self.car.car_coordinates[p][0] - cell_x) * 0.666667 + (self.car.car_coordinates[p][1] - cell_y) >= 451.68:
-                Physics.bounce(self, -0.55, -0.83, p)
-            if (self.car.car_coordinates[p][0] - cell_x) * 0.666667 + (self.car.car_coordinates[p][1] - cell_y) <= 215:
-                Physics.bounce(self, 0.55, 0.83, p)
+        try:
+            if cell_data == self.track.up_right_image:
+                if ly >= lx + 85:      bounce(0.707, -0.707)
+                if ly <= lx - 185:     bounce(-0.707, 0.707)
+                if top_hit():          bounce(0, -1)
+                if left_hit():         bounce(1, 0)
 
-        elif cell_data == self.track.up_right_60_image: ########### NEEDS FIXING ##############
-            if self.car.car_coordinates[p][0] >= cell_x + 385:
-                Physics.bounce(self, -1, 0, p)
-            if self.car.car_coordinates[p][0] <= cell_x + 15:
-                Physics.bounce(self, 1, 0, p)
-            if (self.car.car_coordinates[p][0] - cell_x) * 1.5 - (self.car.car_coordinates[p][1] - cell_y) <= -77.5: 
-                Physics.bounce(self, -0.83, 0.55, p)
-            if (self.car.car_coordinates[p][0] - cell_x) * 1.5 - (self.car.car_coordinates[p][1] - cell_y) >= 277.5:
-                Physics.bounce(self, 0.83, -0.55, p)
+            elif cell_data == self.track.up_left_image:
+                s = lx + ly
+                if s >= 485:           bounce(-0.707, -0.707)
+                if s <= 215:           bounce(0.707, 0.707)
+                if top_hit():          bounce(0, -1)
+                if right_hit():        bounce(-1, 0)
 
-        elif cell_data == self.track.up_left_60_image: ########### NEEDS FIXING ##############
-            if self.car.car_coordinates[p][0] >= cell_x + 385:
-                Physics.bounce(self, -1, 0, p)
-            if self.car.car_coordinates[p][0] <= cell_x + 15:
-                Physics.bounce(self, 1, 0, p)
-            if (self.car.car_coordinates[p][0] - cell_x) * 1.5 + (self.car.car_coordinates[p][1] - cell_y) >= 677.5:
-                Physics.bounce(self, -0.83, -0.55, p)
-            if (self.car.car_coordinates[p][0] - cell_x) * 1.5 + (self.car.car_coordinates[p][1] - cell_y) <= 322.5:
-                Physics.bounce(self, 0.83, 0.55, p)
+            elif cell_data == self.track.down_right_image:
+                s = lx + ly
+                if s >= 585:           bounce(-0.707, -0.707)
+                if s <= 315:           bounce(0.707, 0.707)
+                if bot_hit():          bounce(0, 1)
+                if left_hit():         bounce(1, 0)
 
-        #--------------------------- Corners --------------------------------
-        elif cell_data == self.track.top_right_corner_image:
-            if self.car.car_coordinates[p][0] + self.car.car_coordinates[p][1] <= cell_x + cell_y + 615:
-                Physics.bounce(self, 0.707, 0.707, p)
+            elif cell_data == self.track.down_left_image:
+                d = ly - lx
+                if d >= 185:           bounce(0.707, -0.707)
+                if d <= -85:           bounce(-0.707, 0.707)
+                if bot_hit():          bounce(0, 1)
+                if right_hit():        bounce(-1, 0)
 
-        elif cell_data == self.track.bot_right_corner_image:
-            if self.car.car_coordinates[p][1] - cell_y + 215 >= self.car.car_coordinates[p][0] - cell_x:
-                Physics.bounce(self, 0.707, -0.707, p)
+            elif cell_data == self.track.vert_left_image:
+                if lx >= 185:          bounce(-1, 0)
+                if left_hit():         bounce(1, 0)
 
-        elif cell_data == self.track.top_left_corner_image:
-            if self.car.car_coordinates[p][1] - cell_y - 215 <= self.car.car_coordinates[p][0] - cell_x:
-                Physics.bounce(self, -0.707, 0.707, p)
+            elif cell_data == self.track.vert_right_image:
+                if right_hit():        bounce(-1, 0)
+                if lx <= 215:          bounce(1, 0)
 
-        elif cell_data == self.track.bot_left_corner_image:
-            if self.car.car_coordinates[p][0] + self.car.car_coordinates[p][1] >= cell_x + cell_y + 185:
-                Physics.bounce(self, -0.707, -0.707, p)
+            elif cell_data == self.track.horiz_top_image:
+                if top_hit():          bounce(0, -1)
+                if ly <= 215:          bounce(0, 1)
 
-        else:
-            print("Cell Data Error")
+            elif cell_data == self.track.horiz_bot_image:
+                if ly >= 185:          bounce(0, -1)
+                if bot_hit():          bounce(0, 1)
+
+            elif cell_data == self.track.right_up_60_image:
+                if top_hit():          bounce(0, -1)
+                if bot_hit():          bounce(0, 1)
+                v = lx * 0.666667 - ly
+                if v <= -185:          bounce(-0.55, 0.83)
+                if v >= 51.4:          bounce(0.55, -0.83)
+
+            elif cell_data == self.track.right_down_60_image:
+                if top_hit():          bounce(0, -1)
+                if bot_hit():          bounce(0, 1)
+                v = lx * 0.666667 + ly
+                if v >= 451.68:        bounce(-0.55, -0.83)
+                if v <= 215:           bounce(0.55, 0.83)
+
+            elif cell_data == self.track.up_right_60_image:
+                if right_hit():        bounce(-1, 0)
+                if left_hit():         bounce(1, 0)
+                v = lx * 1.5 - ly
+                if v <= -77.5:         bounce(-0.83, 0.55)
+                if v >= 277.5:         bounce(0.83, -0.55)
+
+            elif cell_data == self.track.up_left_60_image:
+                if right_hit():        bounce(-1, 0)
+                if left_hit():         bounce(1, 0)
+                v = lx * 1.5 + ly
+                if v >= 677.5:         bounce(-0.83, -0.55)
+                if v <= 322.5:         bounce(0.83, 0.55)
+
+            elif cell_data == self.track.top_right_corner_image:
+                if lx + ly <= 615:     bounce(0.707, 0.707)
+
+            elif cell_data == self.track.bot_right_corner_image:
+                if (ly + 215) >= lx:   bounce(0.707, -0.707)
+
+            elif cell_data == self.track.top_left_corner_image:
+                if (ly - 215) <= lx:   bounce(-0.707, 0.707)
+
+            elif cell_data == self.track.bot_left_corner_image:
+                if lx + ly >= 185:     bounce(-0.707, -0.707)
+
+        except StopIteration:
+            return

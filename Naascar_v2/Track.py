@@ -2,7 +2,7 @@ import OpenGL.GL
 
 
 class Track:
-    def __init__(self, track = 0):
+    def __init__(self, track_id = 0):
         #------------------------------ Basic Grey-Track Image Coardinates ------------------------------------
         self.up_right_image =    [[0,0],[0,100],[300,400],[400,400],[400,200],[200,0]]
         self.up_left_image =     [[400,0],[200,0],[0,200],[0,400],[100,400],[400,100]]
@@ -58,17 +58,17 @@ class Track:
          (3,0) : self.right_down_60_image,    (3,1) : self.down_left_image,        (3,2) : self.up_left_image,          (3,3) : self.right_down_60_image,
          (4,0) : self.down_left_image,        (4,1) : self.up_left_60_image,       (4,2) : self.vert_left_image,        (4,3) : self.bot_left_corner_image},  # Track 4
 
-        {(0,0) : self.top_right_corner_image, (0,1) : self.vert_right_image,        (0,2) : self.bot_right_corner_image, (0,3) : self.empty,
-         (1,0) : self.top_left_corner_image,  (1,1) : self.vert_left_image,       (1,2) : self.bot_left_corner_image,  (1,3) : self.empty,
+        {(0,0) : self.top_right_corner_image, (0,1) : self.vert_right_image,       (0,2) : self.bot_right_corner_image, (0,3) : self.empty,
+         (1,0) : self.top_left_corner_image,  (1,1) : self.vert_left_image,        (1,2) : self.bot_left_corner_image,  (1,3) : self.empty,
          (2,0) : self.empty,                  (2,1) : self.empty,                  (2,2) : self.empty,                  (2,3) : self.empty,
          (3,0) : self.empty,                  (3,1) : self.empty,                  (3,2) : self.empty,                  (3,3) : self.empty,
          (4,0) : self.empty,                  (4,1) : self.empty,                  (4,2) : self.empty,                  (4,3) : self.empty},                  # Track 5 --> Small Loop
 
-        {(0,0) : self.top_right_corner_image, (0,1) : self.vert_right_image,       (0,2) : self.vert_right_image,        (0,3) : self.bot_right_corner_image,
-         (1,0) : self.top_left_corner_image,  (1,1) : self.up_right_image,         (1,2) : self.down_right_image,        (1,3) : self.bot_left_corner_image,
-         (2,0) : self.top_right_corner_image, (2,1) : self.up_left_image,          (2,2) : self.down_left_image,         (2,3) : self.bot_right_corner_image,
-         (3,0) : self.top_left_corner_image,  (3,1) : self.up_right_image,        (3,2) : self.down_right_image,         (3,3) : self.bot_left_corner_image,
-         (4,0) : self.empty,                  (4,1) : self.top_left_corner_image,  (4,2) : self.bot_left_corner_image,   (4,3) : self.empty},                 # Track 6
+        {(0,0) : self.top_right_corner_image, (0,1) : self.vert_right_image,       (0,2) : self.vert_right_image,       (0,3) : self.bot_right_corner_image,
+         (1,0) : self.top_left_corner_image,  (1,1) : self.up_right_image,         (1,2) : self.down_right_image,       (1,3) : self.bot_left_corner_image,
+         (2,0) : self.top_right_corner_image, (2,1) : self.up_left_image,          (2,2) : self.down_left_image,        (2,3) : self.bot_right_corner_image,
+         (3,0) : self.top_left_corner_image,  (3,1) : self.up_right_image,         (3,2) : self.down_right_image,       (3,3) : self.bot_left_corner_image,
+         (4,0) : self.empty,                  (4,1) : self.top_left_corner_image,  (4,2) : self.bot_left_corner_image,  (4,3) : self.empty},                 # Track 6
 
         {(0,0) : self.down_right_image,       (0,1) : self.vert_left_image,        (0,2) : self.up_right_image,         (0,3) : self.empty,
          (1,0) : self.right_up_60_image,      (1,1) : self.top_right_corner_image, (1,2) : self.up_left_image,          (1,3) : self.empty,
@@ -82,7 +82,7 @@ class Track:
          (3,0) : self.empty,                  (3,1) : self.horiz_top_image,        (3,2) : self.horiz_bot_image,         (3,3) : self.empty,
          (4,0) : self.empty,                  (4,1) : self.top_left_corner_image,  (4,2) : self.bot_left_corner_image,   (4,3) : self.empty}]                 # Track 8
 
-        self.cells = self.cells_list[track]  # Choosing which track to play
+        self.cells = self.cells_list[track_id]  # Choosing which track to play
         #self.finish_line_cell = (0,1)
         self.finish_line_cell = (0,1)
 

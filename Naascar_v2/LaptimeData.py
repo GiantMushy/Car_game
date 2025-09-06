@@ -1,9 +1,9 @@
 import csv
 import os
-import Laptime
+from Laptime import Laptime
 
 class LaptimeData:
-    def __init__(self, laptimes_filename='C:/Skoli/Python/Naascar_v2/Laptimes.csv'):
+    def __init__(self, laptimes_filename='Naascar_v2/Laptimes.csv'):
         self.laptimes_filename = laptimes_filename
         self.ensure_file_exists()
 
@@ -48,7 +48,7 @@ class LaptimeData:
         laptime = Laptime(**kwargs)
 
         try:
-            with open(self.laptime_filename, mode='a', newline='', encoding='utf-8') as file:
+            with open(self.laptimes_filename, mode='a', newline='', encoding='utf-8') as file:
                 writer = csv.DictWriter(
                     file, fieldnames=laptime.__dict__.keys())
                 if file.tell() == 0:
